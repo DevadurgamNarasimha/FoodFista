@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      body {
+        background-color: #f4f4f9;
+        color: #e30a0a;
+      }
+      header {
+        padding: 20px;
+        text-align: center;
+        background-color: #b1c409;
+        color: #fff;
+      }
+      header h1 {
+        margin-bottom: 10px;
+      }
+      #search-bar {
+        padding: 10px;
+        width: 80%;
+        max-width: 500px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+      }
+      .movie-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px;
+      }
+      .movie-card {
+        background-color: #e51111;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        overflow: hidden;
+        cursor: pointer;
+        transition: transform 0.3s ease;
+        text-align: center;
+      }
+      .movie-card:hover {
+        transform: scale(1.05);
+      }
+      .movie-card img {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+      }
+      .movie-card h3 {
+        margin: 10px 0;
+        font-size: 18px;
+        color: #333;
+      }
+      .movie-card p {
+        font-size: 14px;
+        color: #777;
+      }
+            .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.6);
+        justify-content: center;
+        align-items: center;
+      }
+      .modal-content {
+        background-color: #f50d0d;
+        padding: 20px;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 8px;
+        text-align: left;
+        position: relative;
+      }
+      .close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+        cursor: pointer;
+      }
+      .close:hover {
+        color: #555;
+      }
+      .modal-content h2 {
+        margin-bottom: 15px;
+        color: #333;
+      }
+      .modal-content p {
+        margin: 5px 0;
+        color: #555;
+      }
+      .modal-content p strong {
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Movie Platform</h1>
+      <input type="text" id="search-bar" placeholder="Search for a movie..." />
+    </header>
+    <section id="movie-grid" class="movie-grid"></section>
+    <div id="movie-modal" class="modal">
+      <div class="modal-content">
+        <span id="close-modal" class="close">&times;</span>
+        <h2 id="movie-title"></h2>
+        <p><strong>Director:</strong>
+            <span id="movie-director"></span></p>
+        <p><strong>Cast:</strong>
+            <span id="movie-cast"></span></p>
+        <p><strong>Duration:</strong>
+            <span id="movie-duration"></span></p>
+        <p>
+          <strong>Release Date:</strong>
+          <span id="movie-release-date"></span>
+        </p>
+        <p><strong>Rating:</strong>
+            <span id="movie-rating"></span></p>
+        <p><strong>Tags:</strong>
+            <span id="movie-tags"></span></p>
+      </div>
+    </div>
+    <script>
+          const movieGrid = document.getElementById("movie-grid");
+      const movieModal = document.getElementById("movie-modal");
+      const closeModal = document.getElementById("close-modal");
+      const searchBar = document.getElementById("search-bar");
+      let movies = [];
+      let currentPage = 1;
+      let itemsPerPage = 10;
+      const showLoading = () => {
+        movieGrid.innerHTML = <p>Loading movies...</p>;
+      };
+
+      const hideLoading = () => {
+        movieGrid.innerHTML = "";
+      };
+
+      const showError = (message) => {
+        movieGrid.innerHTML = <p class="error">${message}</p>;
+      };
+      const fetchMovies = async () => {
+        showLoading();
+        try {
+          const response = await fetch(
+            "https://new-project-87688-default-rtdb.firebaseio.com/movies.json"
+          );
+          if (!response.ok) throw new Error("Failed to fetch movies");
+          const data = await response.json();
+          movies = Object.values(data); 
+          paginateMovies(movies);
+        } catch (error) {
+          console.error("Error fetching movies", error);
+          showError("Could not load movies. Please try again later.");
+        } finally {
+          hideLoading();
+        }
+      };
+      const displayMovies = (movieList) => {
+        movieGrid.innerHTML = "";
+        movieList.forEach((movie) => {
+          const movieCard = document.createElement("div");
+          movieCard.classList.add("movie-card");
+          const imageUrl =
+            movie.thumbnail || "https://dummyimage.com/700x400/000/ff";
+
+          movieCard.innerHTML = `
+              <img src="${imageUrl}" alt="${movie.title || "Untitled Movie"}">
+              <h3>${movie.title || "Unknown Title"}</h3>
+              <p>${movie.genre || "Unknown Genre"} | ${
+            movie.releaseDate || "Unknown Release Date"
+          }</p>
+              <p>Rating: ${movie.rating || "Not Rated"}</p>
+            `;
+          movieCard.addEventListener("click", () => showMovieDetails(movie));
+          movieGrid.appendChild(movieCard);
+        });
+      };
+      const showMovieDetails = (movie) => {
+        document.getElementById("movie-title").innerText =
+          movie.title || "Unknown Title";
+        document.getElementById("movie-director").innerText =
+          movie.director || "Unknown Director";
+        document.getElementById("movie-cast").innerText = movie.cast
+          ? movie.cast.join(", ")
+          : "Unknown Cast";
+        document.getElementById("movie-duration").innerText =
+          movie.duration || "Unknown Duration";
+        document.getElementById("movie-release-date").innerText =
+          formatReleaseDate(movie.releaseDate);
+        document.getElementById("movie-rating").innerText =
+          movie.rating || "Not Rated";
+        document.getElementById("movie-tags").innerText = movie.tags
+          ? movie.tags.join(", ")
+          : "No Tags";
+        movieModal.style.display = "block";
+      };
+      closeModal.addEventListener("click", () => {
+        movieModal.style.display = "none";
+      });
+
+      searchBar.addEventListener("input", (e) => {
+        const query = e.target.value.toLowerCase();
+        const filteredMovies = movies.filter(
+          (movie) =>
+            (movie.title && movie.title.toLowerCase().includes(query)) ||
+            (movie.genre && movie.genre.toLowerCase().includes(query)) ||
+            (movie.tags &&
+              movie.tags.some((tag) => tag.toLowerCase().includes(query)))
+        );
+        paginateMovies(filteredMovies);
+      });
+      const paginateMovies = (movieList) => {
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedMovies = movieList.slice(
+          startIndex,
+          startIndex + itemsPerPage
+        );
+        displayMovies(paginatedMovies);
+      };
+      const formatReleaseDate = (releaseDate) => {
+        if (!releaseDate) return "Unknown Release Date";
+        const date = new Date(releaseDate);
+        if (isNaN(date)) return "Invalid Date";
+        return date.toLocaleDateString(); 
+      };
+      const nextPage = () => {
+        currentPage++;
+        paginateMovies(movies);
+      };
+      const prevPage = () => {
+        if (currentPage > 1) {
+          currentPage--;
+          paginateMovies(movies);
+        }
+      };
+      fetchMovies();
+    </script>
+  </body>
+</html>
